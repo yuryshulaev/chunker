@@ -1,0 +1,16 @@
+[package]
+name = "chunker"
+description = "Minimalistic parallel executor"
+version = "0.1.5"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/yuryshulaev/chunker"
+keywords = ["concurrency", "parallel", "performance", "thread"]
+categories = ["concurrency"]
+
+[features]
+default = ["progression"]
+
+[dependencies]
+num_cpus = "1.15.0"
+progression = { version = "0.1.11", optional = true }
