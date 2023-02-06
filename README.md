@@ -1,7 +1,7 @@
 # chunker
 
 Minimalistic alternative to [rayon](https://github.com/rayon-rs/rayon)’s `par_iter`/`par_chunks` + inner iteration + `reduce` for parallel processing of slices with progress bar by default.
-Despite its name, this crate is really tiny: only 138 SLOC.
+Despite its name, this crate is really tiny: only 129 SLOC.
 
 ## Usage
 

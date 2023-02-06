@@ -39,6 +39,24 @@ pub struct Chunker<'a> {
 	pool: scoped_threadpool::Pool,
 }
 
+impl<'a> Chunker<'a> {
+	#[inline]
+	pub fn new(config: Config<'a>) -> Self {
+		Self {
+			#[cfg(feature = "scoped_threadpool")]
+			pool: scoped_threadpool::Pool::new(u32::try_from(config.thread_count).unwrap()),
+			config,
+		}
+	}
+}
+
+impl Default for Chunker<'_> {
+	#[inline]
+	fn default() -> Self {
+		Chunker::new(Config::default())
+	}
+}
+
 macro_rules! run_template {
 	($name:ident, ($($mut:tt)*), $bounds:tt, $chunks_method:ident, $iter_method:ident) => {
 		impl Chunker<'_> {
@@ -58,10 +76,17 @@ macro_rules! run_template {
 				let bar_step = self.config.chunk_size;
 				let chunks = Mutex::new(items.$chunks_method(self.config.chunk_size.min(items.len() / self.config.thread_count + 1)));
 
-				Self::scope(
-					#[cfg(feature = "scoped_threadpool")]
-					&mut self.pool,
-					|scope| {
+				#[cfg(feature = "scoped_threadpool")]
+				macro_rules! scope {
+					($f:expr) => (self.pool.scoped($f))
+				}
+
+				#[cfg(not(feature = "scoped_threadpool"))]
+				macro_rules! scope {
+					($f:expr) => (thread::scope($f))
+				}
+
+				scope!(|scope| {
 					let (sender, receiver) = mpsc::channel();
 
 					for _ in 0..self.config.thread_count {
@@ -118,42 +143,8 @@ macro_rules! run_template {
 	}
 }
 
-impl<'a> Chunker<'a> {
-	#[inline]
-	pub fn new(config: Config<'a>) -> Self {
-		Self {
-			#[cfg(feature = "scoped_threadpool")]
-			pool: scoped_threadpool::Pool::new(u32::try_from(config.thread_count).unwrap()),
-			config,
-		}
-	}
-
-	#[cfg(feature = "scoped_threadpool")]
-	fn scope<'pool, 'scope, F, R>(pool: &'pool mut scoped_threadpool::Pool, f: F) -> R
-	where
-		F: FnOnce(&scoped_threadpool::Scope<'pool, 'scope>) -> R,
-	{
-		pool.scoped(f)
-	}
-
-	#[cfg(not(feature = "scoped_threadpool"))]
-	fn scope<'env, F, T>(f: F) -> T
-	where
-		F: for<'scope> FnOnce(&'scope std::thread::Scope<'scope, 'env>) -> T,
-	{
-		thread::scope(f)
-	}
-}
-
 run_template!(run, (), Sync, chunks, iter);
 run_template!(run_mut, (mut), Send, chunks_mut, iter_mut);
-
-impl Default for Chunker<'_> {
-	#[inline]
-	fn default() -> Self {
-		Chunker::new(Config::default())
-	}
-}
 
 #[cfg(test)]
 mod tests {
