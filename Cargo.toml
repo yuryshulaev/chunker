@@ -13,4 +13,5 @@ default = ["progression"]
 
 [dependencies]
 num_cpus = "1.15.0"
-progression = { version = "0.1.11", optional = true }
+progression = { version = "0.1.13", optional = true }
+scoped_threadpool = { version = "0.1.9", optional = true }
